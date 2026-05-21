@@ -2,14 +2,16 @@
   "name": "matostudio-api",
   "version": "0.1.0",
   "description": "Backend API for MatoStudio: contact forms, quote requests, email delivery and future payment integrations.",
+  "private": true,
+  "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck"
+    "test": "npm run typecheck",
+    "check": "npm run typecheck && npm run build"
   },
   "repository": {
     "type": "git",
@@ -18,12 +20,10 @@
   "keywords": [],
   "author": "MatoStudio",
   "license": "UNLICENSED",
-  "type": "module",
   "bugs": {
     "url": "https://github.com/Matomina/matostudio-api/issues"
   },
   "homepage": "https://github.com/Matomina/matostudio-api#readme",
-  "private": "true",
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
