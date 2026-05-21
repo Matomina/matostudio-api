@@ -1,4 +1,4 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 
 function getEnv(name: string, fallback?: string) {
   const value = process.env[name] ?? fallback;
@@ -10,10 +10,29 @@ function getEnv(name: string, fallback?: string) {
   return value;
 }
 
+function parseOrigins(value?: string) {
+  return (value ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+const defaultFrontendOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://matostudio.fr",
+  "https://www.matostudio.fr",
+];
+
+const configuredFrontendOrigins = parseOrigins(
+  process.env.FRONTEND_ORIGINS ?? process.env.FRONTEND_ORIGIN,
+);
+
 export const env = {
   nodeEnv: getEnv("NODE_ENV", "development"),
   port: Number(getEnv("PORT", "3000")),
-  frontendOrigin: getEnv("FRONTEND_ORIGIN", "http://localhost:5173"),
+  frontendOrigins:
+    configuredFrontendOrigins.length > 0 ? configuredFrontendOrigins : defaultFrontendOrigins,
 
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT ?? 587),
