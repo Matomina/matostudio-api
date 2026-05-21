@@ -1,4 +1,4 @@
-import cors from "cors";
+import cors, { type CorsOptions } from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
@@ -14,12 +14,19 @@ app.set("trust proxy", 1);
 
 app.use(helmet());
 
-app.use(
-  cors({
-    origin: env.frontendOrigin,
-    methods: ["GET", "POST"],
-  }),
-);
+const corsOptions: CorsOptions = {
+  origin(origin, callback) {
+    if (!origin || env.frontendOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`Origin not allowed by CORS: ${origin}`));
+  },
+  methods: ["GET", "POST"],
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: "100kb" }));
 
