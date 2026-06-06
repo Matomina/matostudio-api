@@ -38,4 +38,13 @@ export const env = {
 
   mailFrom: process.env.MAIL_FROM,
   mailTo: process.env.MAIL_TO,
+
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  stripeCurrency: process.env.STRIPE_CURRENCY ?? "eur",
+
+  paymentSuccessUrl: process.env.PAYMENT_SUCCESS_URL ?? "https://matostudio.fr/paiement/succes",
+  paymentCancelUrl: process.env.PAYMENT_CANCEL_URL ?? "https://matostudio.fr/paiement/annule",
+  frontendUrl: process.env.FRONTEND_URL ?? "https://matostudio.fr",
+  adminDashboardUrl: process.env.ADMIN_DASHBOARD_URL ?? "https://matostudio.fr/admin/dashboard",
 };

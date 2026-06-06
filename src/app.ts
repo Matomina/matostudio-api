@@ -9,6 +9,7 @@ import { adminRouter } from "./routes/admin.routes.js";
 import { contactRouter } from "./routes/contact.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { quoteRouter } from "./routes/quote.routes.js";
+import { stripeRouter } from "./routes/stripe.routes.js";
 
 export const app = express();
 
@@ -30,6 +31,10 @@ const corsOptions: CorsOptions = {
 
 app.use(cors(corsOptions));
 app.use(cookieParser());
+
+// Stripe webhook needs raw body — must be registered before express.json()
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json({ limit: "100kb" }));
 
 app.use(
@@ -55,6 +60,7 @@ app.use("/api/quote", formRateLimit);
 app.use(contactRouter);
 app.use(quoteRouter);
 app.use(adminRouter);
+app.use(stripeRouter);
 
 app.use((_request, response) => {
   response.status(404).json({
