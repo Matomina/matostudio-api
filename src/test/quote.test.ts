@@ -1,5 +1,9 @@
 import request from "supertest";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("../db/prisma.js", () => ({
+  prisma: { lead: { create: vi.fn().mockResolvedValue({ id: "test-id" }) } },
+}));
 
 import { app } from "../app.js";
 
