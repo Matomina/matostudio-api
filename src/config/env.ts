@@ -34,11 +34,7 @@ export const env = {
   frontendOrigins:
     configuredFrontendOrigins.length > 0 ? configuredFrontendOrigins : defaultFrontendOrigins,
 
-  smtpHost: process.env.SMTP_HOST,
-  smtpPort: Number(process.env.SMTP_PORT ?? 587),
-  smtpSecure: process.env.SMTP_SECURE === "true",
-  smtpUser: process.env.SMTP_USER,
-  smtpPass: process.env.SMTP_PASS,
+  resendApiKey: process.env.RESEND_API_KEY,
 
   mailFrom: process.env.MAIL_FROM,
   mailTo: process.env.MAIL_TO,

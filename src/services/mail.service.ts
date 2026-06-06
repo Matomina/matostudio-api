@@ -1,26 +1,11 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 import { env } from "../config/env.js";
 import type { ContactPayload } from "../schemas/contact.schema.js";
 import type { QuotePayload } from "../schemas/quote.schema.js";
 
-function hasSmtpConfig() {
-  return Boolean(env.smtpHost && env.smtpUser && env.smtpPass && env.mailFrom && env.mailTo);
-}
-
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: env.smtpHost,
-    port: env.smtpPort,
-    secure: env.smtpSecure,
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 20_000,
-    auth: {
-      user: env.smtpUser,
-      pass: env.smtpPass,
-    },
-  });
+function hasResendConfig() {
+  return Boolean(env.resendApiKey && env.mailFrom && env.mailTo);
 }
 
 export function escapeHtml(str: string): string {
@@ -126,31 +111,27 @@ export async function sendContactEmail(payload: ContactPayload) {
   const text = buildContactEmailText(payload);
   const html = buildContactEmailHtml(payload);
 
-  if (!hasSmtpConfig()) {
+  if (!hasResendConfig()) {
     console.log("[CONTACT_EMAIL_DEV_MODE]");
     console.log(text);
-
-    return {
-      mode: "dev",
-      sent: false,
-    };
+    return { mode: "dev", sent: false };
   }
 
-  const transporter = createTransporter();
-
-  await transporter.sendMail({
-    from: env.mailFrom,
-    to: env.mailTo,
+  const resend = new Resend(env.resendApiKey!);
+  const { error } = await resend.emails.send({
+    from: env.mailFrom!,
+    to: env.mailTo!,
     replyTo: payload.email,
     subject,
     text,
     html,
   });
 
-  return {
-    mode: "smtp",
-    sent: true,
-  };
+  if (error) {
+    throw new Error(`[CONTACT_EMAIL_RESEND_ERROR] ${error.message}`);
+  }
+
+  return { mode: "resend", sent: true };
 }
 
 export async function sendQuoteEmail(payload: QuotePayload) {
@@ -158,29 +139,25 @@ export async function sendQuoteEmail(payload: QuotePayload) {
   const text = buildQuoteEmailText(payload);
   const html = buildQuoteEmailHtml(payload);
 
-  if (!hasSmtpConfig()) {
+  if (!hasResendConfig()) {
     console.log("[QUOTE_EMAIL_DEV_MODE]");
     console.log(text);
-
-    return {
-      mode: "dev",
-      sent: false,
-    };
+    return { mode: "dev", sent: false };
   }
 
-  const transporter = createTransporter();
-
-  await transporter.sendMail({
-    from: env.mailFrom,
-    to: env.mailTo,
+  const resend = new Resend(env.resendApiKey!);
+  const { error } = await resend.emails.send({
+    from: env.mailFrom!,
+    to: env.mailTo!,
     replyTo: payload.email,
     subject,
     text,
     html,
   });
 
-  return {
-    mode: "smtp",
-    sent: true,
-  };
+  if (error) {
+    throw new Error(`[QUOTE_EMAIL_RESEND_ERROR] ${error.message}`);
+  }
+
+  return { mode: "resend", sent: true };
 }
