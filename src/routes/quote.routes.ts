@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ZodError } from "zod";
 
+import { prisma } from "../db/prisma.js";
 import { quoteSchema } from "../schemas/quote.schema.js";
 import { sendQuoteEmail } from "../services/mail.service.js";
 
@@ -9,6 +10,22 @@ export const quoteRouter = Router();
 quoteRouter.post("/api/quote", async (request, response) => {
   try {
     const payload = quoteSchema.parse(request.body);
+
+    await prisma.lead.create({
+      data: {
+        type: "quote",
+        name: payload.name,
+        email: payload.email,
+        phone: payload.phone || null,
+        projectType: payload.projectType,
+        pageCount: payload.pageCount,
+        options: JSON.stringify(payload.options),
+        deadline: payload.deadline,
+        estimate: payload.estimate,
+        message: payload.message || null,
+      },
+    });
+
     const result = await sendQuoteEmail(payload);
 
     response.status(200).json({
