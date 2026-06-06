@@ -10,6 +10,23 @@ import { adminLoginSchema, leadStatusSchema, leadNoteSchema } from "../schemas/a
 export const adminRouter = Router();
 
 const COOKIE_MAX_AGE = 8 * 60 * 60 * 1000; // 8 hours
+const isProduction = process.env.NODE_ENV === "production";
+
+// SameSite=None+Secure required for cross-site cookie between matostudio.fr and matostudio-api.onrender.com
+const adminCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  path: "/",
+  maxAge: COOKIE_MAX_AGE,
+};
+
+const adminClearCookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  path: "/",
+};
 
 // POST /api/admin/auth/login
 adminRouter.post("/api/admin/auth/login", async (request, response) => {
@@ -32,12 +49,7 @@ adminRouter.post("/api/admin/auth/login", async (request, response) => {
 
     const token = jwt.sign({ role: "admin" }, secret, { expiresIn: "8h" });
 
-    response.cookie(ADMIN_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: COOKIE_MAX_AGE,
-    });
+    response.cookie(ADMIN_COOKIE, token, adminCookieOptions);
 
     response.status(200).json({ success: true });
   } catch (error) {
@@ -52,7 +64,7 @@ adminRouter.post("/api/admin/auth/login", async (request, response) => {
 
 // POST /api/admin/auth/logout
 adminRouter.post("/api/admin/auth/logout", (_request, response) => {
-  response.clearCookie(ADMIN_COOKIE, { httpOnly: true, sameSite: "strict" });
+  response.clearCookie(ADMIN_COOKIE, adminClearCookieOptions);
   response.status(200).json({ success: true });
 });
 

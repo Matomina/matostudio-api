@@ -92,6 +92,14 @@ describe("POST /api/admin/auth/login", () => {
     const res = await request(app).post("/api/admin/auth/login").send({});
     expect(res.status).toBe(400);
   });
+
+  it("sets cookie with SameSite=Lax in non-production environment", async () => {
+    const res = await request(app).post("/api/admin/auth/login").send({ password: TEST_PASSWORD });
+    expect(res.status).toBe(200);
+    const cookieHeader = res.headers["set-cookie"];
+    const cookie = Array.isArray(cookieHeader) ? cookieHeader[0] : (cookieHeader as string);
+    expect(cookie.toLowerCase()).toContain("samesite=lax");
+  });
 });
 
 describe("GET /api/admin/auth/me", () => {
@@ -206,5 +214,13 @@ describe("POST /api/admin/auth/logout", () => {
     const res = await request(app).post("/api/admin/auth/logout").set("Cookie", cookie);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  it("clears cookie with SameSite=Lax in non-production environment", async () => {
+    const res = await request(app).post("/api/admin/auth/logout");
+    expect(res.status).toBe(200);
+    const cookieHeader = res.headers["set-cookie"];
+    const cookie = Array.isArray(cookieHeader) ? cookieHeader[0] : (cookieHeader as string);
+    expect(cookie.toLowerCase()).toContain("samesite=lax");
   });
 });
