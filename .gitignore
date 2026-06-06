@@ -5,5 +5,9 @@ dist
 !.env.example
 .DS_Store
 npm-debug.log*
+dev.db
+*.db
+*.sqlite
+*.sqlite3
 
 /src/generated/prisma
