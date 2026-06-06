@@ -28,11 +28,11 @@ to reach this API.
 
 ## Endpoints
 
-| Method | Path | Description |
-| ------ | ---- | ----------- |
-| `GET` | `/health` | Health check |
-| `POST` | `/api/contact` | Contact form submission |
-| `POST` | `/api/quote` | Quote request submission |
+| Method | Path           | Description              |
+| ------ | -------------- | ------------------------ |
+| `GET`  | `/health`      | Health check             |
+| `POST` | `/api/contact` | Contact form submission  |
+| `POST` | `/api/quote`   | Quote request submission |
 
 ### GET /health
 
@@ -78,18 +78,18 @@ Copy `.env.example` to `.env`:
 cp .env.example .env
 ```
 
-| Variable | Required | Description |
-| -------- | -------- | ----------- |
-| `NODE_ENV` | No | `development` or `production` (default: development) |
-| `PORT` | No | Port (default: 3000) |
-| `FRONTEND_ORIGINS` | No | Comma-separated allowed origins |
-| `SMTP_HOST` | Production | SMTP server hostname |
-| `SMTP_PORT` | Production | SMTP port (default: 587) |
-| `SMTP_SECURE` | Production | `true` for port 465, `false` otherwise |
-| `SMTP_USER` | Production | SMTP login |
-| `SMTP_PASS` | Production | SMTP app password |
-| `MAIL_FROM` | Production | From address |
-| `MAIL_TO` | Production | Recipient for notifications |
+| Variable           | Required   | Description                                          |
+| ------------------ | ---------- | ---------------------------------------------------- |
+| `NODE_ENV`         | No         | `development` or `production` (default: development) |
+| `PORT`             | No         | Port (default: 3000)                                 |
+| `FRONTEND_ORIGINS` | No         | Comma-separated allowed origins                      |
+| `SMTP_HOST`        | Production | SMTP server hostname                                 |
+| `SMTP_PORT`        | Production | SMTP port (default: 587)                             |
+| `SMTP_SECURE`      | Production | `true` for port 465, `false` otherwise               |
+| `SMTP_USER`        | Production | SMTP login                                           |
+| `SMTP_PASS`        | Production | SMTP app password                                    |
+| `MAIL_FROM`        | Production | From address                                         |
+| `MAIL_TO`          | Production | Recipient for notifications                          |
 
 ## Installation
 
