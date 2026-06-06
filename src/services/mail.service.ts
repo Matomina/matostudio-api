@@ -92,9 +92,7 @@ export function buildQuoteEmailText(payload: QuotePayload): string {
 
 export function buildQuoteEmailHtml(payload: QuotePayload): string {
   const options =
-    payload.options.length > 0
-      ? payload.options.map(escapeHtml).join(", ")
-      : "Aucune";
+    payload.options.length > 0 ? payload.options.map(escapeHtml).join(", ") : "Aucune";
 
   return `<!DOCTYPE html>
 <html>
