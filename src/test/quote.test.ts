@@ -6,16 +6,24 @@ vi.mock("express-rate-limit", () => ({
 }));
 
 vi.mock("../db/prisma.js", () => ({
-  prisma: { lead: { create: vi.fn().mockResolvedValue({ id: "test-id" }) } },
+  prisma: {
+    lead: {
+      create: vi.fn().mockResolvedValue({ id: "test-id", reference: "DEVIS-20260607-TEST" }),
+    },
+  },
 }));
 
 vi.mock("../services/mail.service.js", () => ({
-  sendQuoteEmail: vi.fn().mockResolvedValue({ mode: "dev", sent: false }),
+  sendQuoteAdminNotification: vi.fn().mockResolvedValue({ mode: "dev", sent: false }),
+  sendQuoteClientConfirmation: vi.fn().mockResolvedValue({ mode: "dev", sent: false }),
 }));
 
 import { app } from "../app.js";
 import { prisma } from "../db/prisma.js";
-import { sendQuoteEmail } from "../services/mail.service.js";
+import {
+  sendQuoteAdminNotification,
+  sendQuoteClientConfirmation,
+} from "../services/mail.service.js";
 
 const validQuote = {
   name: "Test User",
@@ -30,10 +38,11 @@ const validQuote = {
 };
 
 describe("POST /api/quote", () => {
-  it("accepts a valid payload", async () => {
+  it("accepts a valid payload and returns reference", async () => {
     const res = await request(app).post("/api/quote").send(validQuote);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    expect(res.body.reference).toMatch(/^DEVIS-\d{8}-[A-Z0-9]{4}$/);
   });
 
   it("rejects an invalid pageCount (zero)", async () => {
@@ -76,12 +85,36 @@ describe("POST /api/quote", () => {
     expect(res.body.success).toBe(true);
   });
 
-  it("responds 200 with delivery:failed even if email send throws", async () => {
-    vi.mocked(sendQuoteEmail).mockRejectedValueOnce(new Error("SMTP unreachable"));
+  it("calls sendQuoteAdminNotification with correct data", async () => {
+    await request(app).post("/api/quote").send(validQuote);
+    expect(sendQuoteAdminNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Test User", email: "test@example.com" }),
+      expect.objectContaining({ reference: expect.stringMatching(/^DEVIS-/) }),
+    );
+  });
+
+  it("calls sendQuoteClientConfirmation with correct data", async () => {
+    await request(app).post("/api/quote").send(validQuote);
+    expect(sendQuoteClientConfirmation).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Test User", email: "test@example.com" }),
+      expect.objectContaining({ reference: expect.stringMatching(/^DEVIS-/) }),
+    );
+  });
+
+  it("responds 200 with delivery.admin:failed even if admin email throws", async () => {
+    vi.mocked(sendQuoteAdminNotification).mockRejectedValueOnce(new Error("Resend unreachable"));
     const res = await request(app).post("/api/quote").send(validQuote);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.delivery).toBe("failed");
+    expect(res.body.delivery.admin).toBe("failed");
+  });
+
+  it("responds 200 with delivery.client:failed even if client email throws", async () => {
+    vi.mocked(sendQuoteClientConfirmation).mockRejectedValueOnce(new Error("Resend unreachable"));
+    const res = await request(app).post("/api/quote").send(validQuote);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.delivery.client).toBe("failed");
   });
 
   it("returns 500 if lead creation fails", async () => {

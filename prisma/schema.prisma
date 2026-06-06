@@ -22,6 +22,40 @@ model Lead {
   message      String?
   status       String   @default("new")
   internalNote String?
+  reference    String?
+  finalAmount  Float?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  emailLogs      EmailLog[]
+  paymentRequest PaymentRequest?
+}
+
+model EmailLog {
+  id                String    @id @default(cuid())
+  leadId            String
+  lead              Lead      @relation(fields: [leadId], references: [id])
+  type              String
+  recipient         String
+  subject           String
+  status            String
+  providerMessageId String?
+  errorMessage      String?
+  sentAt            DateTime?
+  createdAt         DateTime  @default(now())
+}
+
+model PaymentRequest {
+  id                      String    @id @default(cuid())
+  leadId                  String    @unique
+  lead                    Lead      @relation(fields: [leadId], references: [id])
+  amount                  Float
+  currency                String    @default("eur")
+  stripeCheckoutSessionId String?
+  stripePaymentIntentId   String?
+  checkoutUrl             String?
+  qrCodeDataUrl           String?
+  status                  String    @default("CREATED")
+  createdAt               DateTime  @default(now())
+  paidAt                  DateTime?
 }

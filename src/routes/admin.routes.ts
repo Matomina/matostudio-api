@@ -5,7 +5,14 @@ import { ZodError } from "zod";
 
 import { prisma } from "../db/prisma.js";
 import { requireAuth, ADMIN_COOKIE } from "../middleware/auth.middleware.js";
-import { adminLoginSchema, leadStatusSchema, leadNoteSchema } from "../schemas/admin.schema.js";
+import {
+  adminLoginSchema,
+  leadStatusSchema,
+  leadNoteSchema,
+  approveLeadSchema,
+} from "../schemas/admin.schema.js";
+import { createCheckoutSession } from "../services/stripe.service.js";
+import { sendPaymentRequestEmail } from "../services/mail.service.js";
 
 export const adminRouter = Router();
 
@@ -180,5 +187,131 @@ adminRouter.patch("/api/admin/leads/:id/note", requireAuth, async (request, resp
     }
     console.error(error);
     response.status(500).json({ success: false, error: "Failed to update note." });
+  }
+});
+
+// PATCH /api/admin/leads/:id/approve
+adminRouter.patch("/api/admin/leads/:id/approve", requireAuth, async (request, response) => {
+  try {
+    const { finalAmount, adminNotes } = approveLeadSchema.parse(request.body);
+    const lead = await prisma.lead.update({
+      where: { id: String(request.params.id) },
+      data: {
+        status: "approved",
+        finalAmount,
+        ...(adminNotes !== undefined ? { internalNote: adminNotes || null } : {}),
+      },
+    });
+    response.status(200).json({ success: true, lead });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      response.status(400).json({ success: false, error: "Invalid approval payload." });
+      return;
+    }
+    console.error(error);
+    response.status(500).json({ success: false, error: "Failed to approve lead." });
+  }
+});
+
+// POST /api/admin/leads/:id/payment-request
+adminRouter.post("/api/admin/leads/:id/payment-request", requireAuth, async (request, response) => {
+  try {
+    const lead = await prisma.lead.findUnique({
+      where: { id: String(request.params.id) },
+    });
+
+    if (!lead) {
+      response.status(404).json({ success: false, error: "Lead not found." });
+      return;
+    }
+
+    if (lead.type !== "quote") {
+      response
+        .status(400)
+        .json({ success: false, error: "Only quotes can have payment requests." });
+      return;
+    }
+
+    if (lead.finalAmount === null) {
+      response.status(400).json({
+        success: false,
+        error:
+          "finalAmount must be set before creating a payment request. Use PATCH /approve first.",
+      });
+      return;
+    }
+
+    const existing = await prisma.paymentRequest.findUnique({
+      where: { leadId: lead.id },
+    });
+    if (existing?.status === "PAID") {
+      response.status(409).json({ success: false, error: "This quote has already been paid." });
+      return;
+    }
+
+    const { sessionId, checkoutUrl, qrCodeDataUrl } = await createCheckoutSession({
+      id: lead.id,
+      name: lead.name,
+      email: lead.email,
+      reference: lead.reference,
+      projectType: lead.projectType,
+      finalAmount: lead.finalAmount,
+    });
+
+    const paymentRequest = await prisma.paymentRequest.upsert({
+      where: { leadId: lead.id },
+      create: {
+        leadId: lead.id,
+        amount: lead.finalAmount,
+        currency: "eur",
+        stripeCheckoutSessionId: sessionId,
+        checkoutUrl,
+        qrCodeDataUrl,
+        status: "CREATED",
+      },
+      update: {
+        stripeCheckoutSessionId: sessionId,
+        checkoutUrl,
+        qrCodeDataUrl,
+        status: "CREATED",
+        paidAt: null,
+      },
+    });
+
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { status: "payment_requested" },
+    });
+
+    let deliveryClient: "resend" | "dev" | "failed" = "failed";
+    try {
+      const result = await sendPaymentRequestEmail({
+        id: lead.id,
+        name: lead.name,
+        email: lead.email,
+        reference: lead.reference,
+        finalAmount: lead.finalAmount,
+        projectType: lead.projectType,
+        estimate: lead.estimate,
+        checkoutUrl,
+      });
+      deliveryClient = result.mode as "resend" | "dev";
+    } catch (emailErr) {
+      console.error("[PAYMENT_REQUEST_EMAIL_FAILED]", emailErr);
+    }
+
+    response.status(200).json({
+      success: true,
+      paymentRequest: {
+        id: paymentRequest.id,
+        amount: paymentRequest.amount,
+        checkoutUrl: paymentRequest.checkoutUrl,
+        status: paymentRequest.status,
+      },
+      delivery: { client: deliveryClient },
+    });
+  } catch (error) {
+    console.error(error);
+    response.status(500).json({ success: false, error: "Failed to create payment request." });
   }
 });

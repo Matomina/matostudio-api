@@ -13,10 +13,19 @@ vi.mock("../config/env.js", () => ({
     resendApiKey: "re_test_key",
     mailFrom: "MatoStudio <noreply@matostudio.fr>",
     mailTo: "contact@matostudio.fr",
+    frontendUrl: "https://matostudio.fr",
+    adminDashboardUrl: "https://matostudio.fr/admin",
   },
 }));
 
-import { sendContactEmail, sendQuoteEmail } from "../services/mail.service.js";
+// prisma mock so logEmail fire-and-forget does not blow up
+vi.mock("../db/prisma.js", () => ({
+  prisma: {
+    emailLog: { create: vi.fn().mockResolvedValue({}) },
+  },
+}));
+
+import { sendContactEmail, sendQuoteAdminNotification } from "../services/mail.service.js";
 
 const validContact = {
   name: "Test User",
@@ -48,7 +57,7 @@ beforeEach(() => {
 describe("sendContactEmail", () => {
   it("returns mode:resend when Resend succeeds", async () => {
     const result = await sendContactEmail(validContact);
-    expect(result).toEqual({ mode: "resend", sent: true });
+    expect(result).toEqual(expect.objectContaining({ mode: "resend", sent: true }));
   });
 
   it("calls Resend with correct from/to/replyTo/subject", async () => {
@@ -68,24 +77,29 @@ describe("sendContactEmail", () => {
       data: null,
       error: { message: "API key invalid", name: "validation_error" },
     });
-    await expect(sendContactEmail(validContact)).rejects.toThrow("CONTACT_EMAIL_RESEND_ERROR");
+    await expect(sendContactEmail(validContact)).rejects.toThrow("Resend error");
   });
 });
 
-describe("sendQuoteEmail", () => {
+describe("sendQuoteAdminNotification", () => {
   it("returns mode:resend when Resend succeeds", async () => {
-    const result = await sendQuoteEmail(validQuote);
+    const result = await sendQuoteAdminNotification(validQuote, {
+      leadId: "lead-001",
+      reference: "DEVIS-20260607-TEST",
+    });
     expect(result).toEqual({ mode: "resend", sent: true });
   });
 
-  it("calls Resend with correct from/to/replyTo/subject", async () => {
-    await sendQuoteEmail(validQuote);
+  it("calls Resend with correct from/to and reference in subject", async () => {
+    await sendQuoteAdminNotification(validQuote, {
+      leadId: "lead-001",
+      reference: "DEVIS-20260607-TEST",
+    });
     expect(mockSend).toHaveBeenCalledWith(
       expect.objectContaining({
         from: "MatoStudio <noreply@matostudio.fr>",
         to: "contact@matostudio.fr",
-        replyTo: validQuote.email,
-        subject: expect.stringContaining(validQuote.name),
+        subject: expect.stringContaining("DEVIS-20260607-TEST"),
       }),
     );
   });
@@ -95,6 +109,11 @@ describe("sendQuoteEmail", () => {
       data: null,
       error: { message: "Rate limit exceeded", name: "rate_limit_exceeded" },
     });
-    await expect(sendQuoteEmail(validQuote)).rejects.toThrow("QUOTE_EMAIL_RESEND_ERROR");
+    await expect(
+      sendQuoteAdminNotification(validQuote, {
+        leadId: "lead-001",
+        reference: "DEVIS-20260607-TEST",
+      }),
+    ).rejects.toThrow("Resend error");
   });
 });
