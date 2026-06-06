@@ -39,7 +39,17 @@ app.use(
   }),
 );
 
+const formRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many requests. Please try again later." },
+});
+
 app.use(healthRouter);
+app.use("/api/contact", formRateLimit);
+app.use("/api/quote", formRateLimit);
 app.use(contactRouter);
 app.use(quoteRouter);
 

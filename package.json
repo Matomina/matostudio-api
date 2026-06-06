@@ -10,8 +10,13 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "npm run typecheck",
-    "check": "npm run typecheck && npm run build"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test && npm run build"
   },
   "repository": {
     "type": "git",
@@ -38,9 +43,13 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
     "@types/nodemailer": "^8.0.0",
+    "@types/supertest": "^7.2.0",
     "eslint": "^10.4.0",
     "prettier": "^3.8.3",
+    "supertest": "^7.2.2",
     "tsx": "^4.22.3",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.60.1",
+    "vitest": "^4.1.8"
   }
 }
