@@ -1,11 +1,21 @@
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("express-rate-limit", () => ({
+  default: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 vi.mock("../db/prisma.js", () => ({
   prisma: { lead: { create: vi.fn().mockResolvedValue({ id: "test-id" }) } },
 }));
 
+vi.mock("../services/mail.service.js", () => ({
+  sendContactEmail: vi.fn().mockResolvedValue({ mode: "dev", sent: false }),
+}));
+
 import { app } from "../app.js";
+import { prisma } from "../db/prisma.js";
+import { sendContactEmail } from "../services/mail.service.js";
 
 const validContact = {
   name: "Test User",
@@ -59,5 +69,20 @@ describe("POST /api/contact", () => {
     const res = await request(app).post("/api/contact").send(frontendPayload);
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  it("responds 200 with delivery:failed even if email send throws", async () => {
+    vi.mocked(sendContactEmail).mockRejectedValueOnce(new Error("SMTP unreachable"));
+    const res = await request(app).post("/api/contact").send(validContact);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.delivery).toBe("failed");
+  });
+
+  it("returns 500 if lead creation fails", async () => {
+    vi.mocked(prisma.lead.create).mockRejectedValueOnce(new Error("DB error"));
+    const res = await request(app).post("/api/contact").send(validContact);
+    expect(res.status).toBe(500);
+    expect(res.body.success).toBe(false);
   });
 });

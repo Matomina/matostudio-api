@@ -24,12 +24,18 @@ contactRouter.post("/api/contact", async (request, response) => {
       },
     });
 
-    const result = await sendContactEmail(payload);
+    let delivery: "smtp" | "dev" | "failed" = "failed";
+    try {
+      const result = await sendContactEmail(payload);
+      delivery = result.mode as "smtp" | "dev";
+    } catch (emailError) {
+      console.error("[CONTACT_EMAIL_SEND_FAILED]", emailError);
+    }
 
     response.status(200).json({
       success: true,
       message: "Contact request received.",
-      delivery: result.mode,
+      delivery,
     });
   } catch (error) {
     if (error instanceof ZodError) {
